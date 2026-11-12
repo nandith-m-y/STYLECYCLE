@@ -348,3 +348,4 @@ class BiometricAIEngine:
                 "brandsEvaluated": len(BRAND_SIZE_CHARTS)
             }
         }
+

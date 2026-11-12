@@ -28,3 +28,4 @@ def get_complementary_recommendations(req: RecommendationsRequest):
         return {"status": "success", "recommendations": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+

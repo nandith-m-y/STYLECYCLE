@@ -28,3 +28,4 @@ class SmartShoppingAIEngine:
             
         scored.sort(key=lambda x: x[0], reverse=True)
         return [item[1] for item in scored[:limit]]
+

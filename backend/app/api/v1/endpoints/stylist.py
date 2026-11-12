@@ -61,3 +61,4 @@ def swap_outfit_piece(req: SwapPieceRequest):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI Piece Swap Failed: {str(e)}")
+

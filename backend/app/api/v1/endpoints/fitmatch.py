@@ -103,3 +103,4 @@ def get_single_recommendation(req: FitScanRequest):
         return {"status": "success", "recommendation": rec}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
