@@ -8,7 +8,27 @@ export const wardrobeService = {
   getItems() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY_WARDROBE);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const items = JSON.parse(raw);
+        // Self-heal known placeholder image assets
+        let healed = false;
+        const updated = items.map(i => {
+          if (i.id === "w-7" && i.image && i.image.includes("1539571696357")) {
+            healed = true;
+            return { ...i, name: "Brushed Wool Camel Overcoat", image: "https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=800&q=80" };
+          }
+          if (i.id === "w-1" && i.image && i.image.includes("1596755094514")) {
+            healed = true;
+            return { ...i, image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=800&q=80" };
+          }
+          return i;
+        });
+        if (healed) {
+          safeStorageSetItem(STORAGE_KEY_WARDROBE, updated);
+          return updated;
+        }
+        return items;
+      }
     } catch (e) {
       console.warn("Error reading wardrobe", e);
     }

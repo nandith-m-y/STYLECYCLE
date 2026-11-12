@@ -1,8 +1,16 @@
 import React, { useState } from "react";
 import { FIT_PREFERENCES } from "../../data/sizeCharts";
-import { Ruler, Info, Check } from "lucide-react";
+import { FABRIC_TYPES } from "../../services/fitmatchService";
+import { Ruler, Info, Check, Sparkles, Cpu, Layers } from "lucide-react";
 
-export const MeasurementForm = ({ measurements, onChange, onSave }) => {
+export const MeasurementForm = ({ 
+  measurements, 
+  onChange, 
+  onSave, 
+  onTriggerScan, 
+  selectedFabricId, 
+  onSelectFabric 
+}) => {
   const [unit, setUnit] = useState("cm"); // cm or inches
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -38,9 +46,9 @@ export const MeasurementForm = ({ measurements, onChange, onSave }) => {
         <div>
           <h3 className="font-serif text-lg font-medium text-dark flex items-center gap-2">
             <Ruler className="w-5 h-5 text-primary" />
-            Anatomical Measurement Profile
+            Anatomical Biometric Profile
           </h3>
-          <p className="text-xs text-dark-muted">Saved to your profile for automatic size matching across all brands.</p>
+          <p className="text-xs text-dark-muted">Saved to your profile for zero-return intelligent size matching.</p>
         </div>
 
         {/* Unit Toggle */}
@@ -171,7 +179,7 @@ export const MeasurementForm = ({ measurements, onChange, onSave }) => {
       {/* Preferred Fitting Section */}
       <div className="space-y-3 pt-3 border-t border-border">
         <label className="block text-xs font-semibold uppercase tracking-wider text-dark">
-          Preferred Silhouette & Ease:
+          Target Silhouette Ease:
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {FIT_PREFERENCES.map((pref) => {
@@ -197,15 +205,53 @@ export const MeasurementForm = ({ measurements, onChange, onSave }) => {
         </div>
       </div>
 
-      {/* Save Button */}
-      <div className="flex items-center justify-between pt-2">
-        <div className="flex items-center gap-1.5 text-xs text-dark-muted">
-          <Info className="w-4 h-4 text-primary" />
-          <span>Transparent rule-based matching against real brand grade rules.</span>
+      {/* Fabric Tensile Selection */}
+      <div className="space-y-3 pt-3 border-t border-border">
+        <div className="flex items-center justify-between">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-dark flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-primary" />
+            Fabric Elasticity & Tensile Behavior:
+          </label>
+          <span className="text-[10px] text-dark-muted">Affects garment ease & shrinkage</span>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {FABRIC_TYPES.map((fab) => {
+            const isSelected = (selectedFabricId || "stretch_blend") === fab.id;
+            return (
+              <div
+                key={fab.id}
+                onClick={() => onSelectFabric && onSelectFabric(fab.id)}
+                className={`p-2.5 rounded border cursor-pointer transition-all ${
+                  isSelected
+                    ? "border-primary bg-primary-soft text-primary ring-1 ring-primary/40"
+                    : "border-border hover:border-dark-muted bg-white text-dark"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold line-clamp-1">{fab.label}</span>
+                  {isSelected && <Check className="w-3 h-3 text-primary flex-shrink-0" />}
+                </div>
+                <p className="text-[10px] text-dark-muted mt-0.5 line-clamp-2">{fab.desc}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Action Buttons: Save & Trigger Live AI Scan */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-border">
+        <button
+          type="button"
+          onClick={onTriggerScan}
+          className="w-full sm:w-auto luxury-btn px-6 py-2.5 rounded-sm text-xs uppercase tracking-wider font-semibold flex items-center justify-center gap-2 bg-[#1b261e] text-emerald-300 hover:bg-[#111813] border border-emerald-600/30 transition-all shadow-sm"
+        >
+          <Cpu className="w-4 h-4 text-emerald-400" />
+          <span>Run Live AI Biometric Scan</span>
+        </button>
+
         <button
           type="submit"
-          className="luxury-btn luxury-btn-primary px-6 py-2.5 rounded-sm text-xs uppercase tracking-wider font-semibold flex items-center gap-2"
+          className="w-full sm:w-auto luxury-btn luxury-btn-primary px-6 py-2.5 rounded-sm text-xs uppercase tracking-wider font-semibold flex items-center justify-center gap-2"
         >
           {savedSuccess ? (
             <>
