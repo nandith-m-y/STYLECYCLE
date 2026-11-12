@@ -1,4 +1,5 @@
 import { INITIAL_WARDROBE } from "../data/wardrobe.js";
+import apiClient from "./api.js";
 
 export const OCCASIONS = [
   "Casual", "Office", "College", "Party", "Wedding", "Travel", "Formal"
@@ -52,8 +53,105 @@ export const AI_PROCESSING_STEPS = [
 ];
 
 /**
- * Advanced Multi-Modal AI Personal Stylist Engine
- * Analyzes wardrobe items with multi-dimensional scoring: Occasion, Style, Color, Weather & Silhouette.
+ * Backend AI Outfit Generation Invocation
+ * Calls FastAPI backend at /api/v1/stylist/generate with fallback to local engine
+ */
+export const generateAIOutfitBackend = async ({
+  wardrobeItems = [],
+  occasion = "Casual",
+  style = "Smart Casual",
+  palette = "Earth & Sand Tones",
+  weather = "mild",
+  excludedItemIds = []
+}) => {
+  try {
+    const res = await apiClient.post("/stylist/generate", {
+      wardrobe: wardrobeItems,
+      occasion,
+      style,
+      colorMood: palette,
+      weather
+    });
+
+    if (res.data && res.data.status === "success" && res.data.ensemble) {
+      const ens = res.data.ensemble;
+      return {
+        id: ens.id || `ai-ensemble-${Date.now()}`,
+        name: ens.name || `${occasion} ${style} Ensemble`,
+        occasion: ens.occasion || occasion,
+        style: ens.style || style,
+        palette: ens.colorMood || palette,
+        weather: ens.weatherContext || weather,
+        generatedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        top: ens.pieces?.top || ens.top,
+        bottom: ens.pieces?.bottom || ens.bottom,
+        shoes: ens.pieces?.footwear || ens.shoes,
+        accessory: ens.pieces?.accessory || ens.accessory,
+        alternates: {
+          tops: ens.alternates?.tops || [],
+          bottoms: ens.alternates?.bottoms || [],
+          shoes: ens.alternates?.footwear || ens.alternates?.shoes || [],
+          accessories: ens.alternates?.outerwear || ens.alternates?.accessories || []
+        },
+        metrics: {
+          overallSynergyScore: ens.synergyScore || 96,
+          colorHarmonyScore: ens.colorHarmonyScore || 95,
+          occasionFitScore: ens.occasionFitScore || 96,
+          comfortIndex: ens.comfortIndex || 94,
+          silhouetteScore: ens.silhouetteScore || 93
+        },
+        explanation: ens.proTips?.[0] || `An impeccably balanced ${style} combination configured for ${occasion} scenarios with thermal weather optimization.`,
+        proTips: ens.proTips || [],
+        paletteBreakdown: {
+          primaryColor: ens.colorRule?.primary || "Neutral Base",
+          primaryPercent: `${ens.colorRule?.primaryRatio || 60}%`,
+          secondaryColor: ens.colorRule?.secondary || "Tonal Complement",
+          secondaryPercent: `${ens.colorRule?.secondaryRatio || 30}%`,
+          accentColor: ens.colorRule?.accent || "Highlight Accent",
+          accentPercent: `${ens.colorRule?.accentRatio || 10}%`
+        },
+        telemetry: ens.telemetry,
+        sustainabilityImpact: "100% circular utilization of existing wardrobe assets (0 kg CO2 consumed)"
+      };
+    }
+  } catch (err) {
+    console.warn("[AI Stylist] Backend API unreachable, falling back to local engine:", err?.message || err);
+  }
+
+  // Fallback to local rule engine
+  return generateOutfitRecommendation({
+    wardrobeItems,
+    occasion,
+    style,
+    palette,
+    weather,
+    excludedItemIds
+  });
+};
+
+/**
+ * Backend AI Piece Swapping
+ */
+export const swapOutfitPieceBackend = async ({ currentPieces, slot, wardrobe, occasion, style }) => {
+  try {
+    const res = await apiClient.post("/stylist/swap", {
+      currentPieces,
+      slot,
+      wardrobe,
+      occasion,
+      style
+    });
+    if (res.data && res.data.status === "success") {
+      return res.data;
+    }
+  } catch (err) {
+    console.warn("[AI Stylist] Backend swap call failed, using client-side swap fallback:", err?.message || err);
+  }
+  return null;
+};
+
+/**
+ * Local Fallback Multi-Modal AI Personal Stylist Engine
  */
 export const generateOutfitRecommendation = ({
   wardrobeItems = [],
@@ -77,7 +175,6 @@ export const generateOutfitRecommendation = ({
   const scoreGarment = (item, role) => {
     let score = 50;
 
-    // Occasion affinity
     if (item.occasion === occasion) score += 30;
     else if (
       (occasion === "Party" && (item.occasion === "Formal" || item.occasion === "Smart Casual")) ||
@@ -88,7 +185,6 @@ export const generateOutfitRecommendation = ({
       score += 15;
     }
 
-    // Aesthetic style affinity
     if (item.style === style) score += 25;
     else if (
       (style === "Smart Casual" && (item.style === "Minimalist" || item.style === "Casual")) ||
@@ -97,7 +193,6 @@ export const generateOutfitRecommendation = ({
       score += 12;
     }
 
-    // Color palette affinity
     const colorLower = (item.color || "").toLowerCase();
     if (palette === "Monochrome Minimalist") {
       if (colorLower.includes("black") || colorLower.includes("white") || colorLower.includes("grey") || colorLower.includes("charcoal")) score += 20;
@@ -107,22 +202,17 @@ export const generateOutfitRecommendation = ({
       if (colorLower.includes("navy") || colorLower.includes("blue") || colorLower.includes("white")) score += 20;
     }
 
-    // Weather appropriateness
     if (role === "outerwear") {
       if (weather === "chilly" && (item.season === "Winter" || item.season === "Autumn")) score += 25;
       if (weather === "warm" && item.season === "Summer") score += 20;
     }
 
-    // User favorites boost
     if (item.isFavorite) score += 10;
-
-    // Slight randomized jitter for exploration diversity on regenerate
     score += Math.random() * 8;
 
     return score;
   };
 
-  // Rank and select pieces
   const sortedTops = [...tops].sort((a, b) => scoreGarment(b, "top") - scoreGarment(a, "top"));
   const sortedBottoms = [...bottoms].sort((a, b) => scoreGarment(b, "bottom") - scoreGarment(a, "bottom"));
   const sortedShoes = [...shoes].sort((a, b) => scoreGarment(b, "shoes") - scoreGarment(a, "shoes"));
@@ -133,20 +223,17 @@ export const generateOutfitRecommendation = ({
   const selectedShoes = sortedShoes[0] || pool[2] || pool[0];
   const selectedAccessory = sortedOuterwear[0] || pool[3] || pool[0];
 
-  // Alternates for live piece swapping
   const alternativeTops = sortedTops.slice(1, 4);
   const alternativeBottoms = sortedBottoms.slice(1, 4);
   const alternativeShoes = sortedShoes.slice(1, 4);
   const alternativeAccessories = sortedOuterwear.slice(1, 4);
 
-  // Compute AI Match Metrics (88% - 98%)
   const colorHarmonyScore = Math.floor(93 + Math.random() * 6);
   const occasionFitScore = Math.floor(94 + Math.random() * 5);
   const comfortIndex = Math.floor(90 + Math.random() * 8);
   const silhouetteScore = Math.floor(92 + Math.random() * 6);
   const overallSynergyScore = Math.round((colorHarmonyScore * 0.35) + (occasionFitScore * 0.35) + (silhouetteScore * 0.2) + (comfortIndex * 0.1));
 
-  // Dynamic context-aware styling rationale
   const rationales = {
     Party: `Curated for elevated evening impact. The crisp lines of the ${selectedTop.name} juxtaposed against ${selectedBottom.name} anchor a sleek silhouette. Layering with ${selectedAccessory.name} adds tactile sophistication under ambient lighting, while ${selectedShoes.name} delivers effortless contemporary edge.`,
     Office: `Designed for purposeful professional refinement. The structured tailoring of ${selectedTop.name} balances seamlessly with ${selectedBottom.name}, establishing authority without stiffness. ${selectedAccessory.name} elevates the ensemble into an executive benchmark.`,

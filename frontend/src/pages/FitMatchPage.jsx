@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { MeasurementForm } from "../components/fitmatch/MeasurementForm";
 import { SizeRecommendationCard } from "../components/fitmatch/SizeRecommendationCard";
@@ -9,12 +9,14 @@ import {
   calculateFitRecommendation, 
   classifyBodyArchetype, 
   simulateMultiBrandMatrix,
+  runAIBiometricScanBackend,
   FABRIC_TYPES 
 } from "../services/fitmatchService";
-import { Ruler, Sparkles, Check, Info, Cpu, Layers, RefreshCw } from "lucide-react";
+import { Ruler, Sparkles, Check, Info, Cpu, Layers, RefreshCw, CheckCircle2 } from "lucide-react";
 
 export const FitMatchPage = () => {
   const { user, updateMeasurements } = useAuth();
+  const scannerRef = useRef(null);
 
   const [measurements, setMeasurements] = useState(
     user?.measurements || {
@@ -34,6 +36,7 @@ export const FitMatchPage = () => {
   const [selectedFabricId, setSelectedFabricId] = useState("stretch_blend");
   const [isScanning, setIsScanning] = useState(false);
   const [scanCompletedAtLeastOnce, setScanCompletedAtLeastOnce] = useState(false);
+  const [backendScanData, setBackendScanData] = useState(null);
 
   const handleSave = async (updated) => {
     setMeasurements(updated);
@@ -42,8 +45,34 @@ export const FitMatchPage = () => {
     }
   };
 
-  const handleTriggerScan = () => {
+  const handleTriggerScan = async () => {
     setIsScanning(true);
+    
+    // Smoothly scroll to the live AI HUD container so the user immediately observes the neural telemetry
+    setTimeout(() => {
+      if (scannerRef.current) {
+        scannerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        window.scrollTo({ top: 180, behavior: "smooth" });
+      }
+    }, 50);
+
+    try {
+      // Execute Python FastAPI AI Biometric Engine in background
+      const result = await runAIBiometricScanBackend({
+        measurements,
+        brand: selectedBrand,
+        category: selectedCategory,
+        preferredFit: measurements.preferredFit || "Regular",
+        fabricId: selectedFabricId
+      });
+
+      if (result) {
+        setBackendScanData(result);
+      }
+    } catch (err) {
+      console.error("[FitMatch] Error executing AI scan:", err);
+    }
   };
 
   const handleScanComplete = () => {
@@ -51,13 +80,19 @@ export const FitMatchPage = () => {
     setScanCompletedAtLeastOnce(true);
   };
 
-  // Compute body archetype
+  // Derive body archetype (prefer backend data when available)
   const archetypeData = useMemo(() => {
+    if (backendScanData?.archetype) {
+      return backendScanData.archetype;
+    }
     return classifyBodyArchetype(measurements);
-  }, [measurements]);
+  }, [backendScanData, measurements]);
 
-  // Compute single brand recommendation
+  // Derive single brand recommendation (prefer backend data when available)
   const recommendation = useMemo(() => {
+    if (backendScanData?.recommendation) {
+      return backendScanData.recommendation;
+    }
     return calculateFitRecommendation({
       measurements,
       brand: selectedBrand,
@@ -65,16 +100,19 @@ export const FitMatchPage = () => {
       preferredFit: measurements.preferredFit || "Regular",
       fabricId: selectedFabricId
     });
-  }, [measurements, selectedBrand, selectedCategory, selectedFabricId]);
+  }, [backendScanData, measurements, selectedBrand, selectedCategory, selectedFabricId]);
 
-  // Compute multi-brand comparison matrix
+  // Derive multi-brand matrix (prefer backend data when available)
   const brandMatrix = useMemo(() => {
+    if (backendScanData?.matrix) {
+      return backendScanData.matrix;
+    }
     return simulateMultiBrandMatrix(
       measurements,
       selectedCategory,
       measurements.preferredFit || "Regular"
     );
-  }, [measurements, selectedCategory]);
+  }, [backendScanData, measurements, selectedCategory]);
 
   const activeFabricObj = FABRIC_TYPES.find(f => f.id === selectedFabricId) || FABRIC_TYPES[1];
 
@@ -86,13 +124,13 @@ export const FitMatchPage = () => {
         <div className="max-w-2xl space-y-3">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full text-xs font-semibold uppercase tracking-widest text-primary border border-border">
             <Cpu className="w-3.5 h-3.5" />
-            AI Biometric Sizing Engine
+            AI Biometric Sizing Engine (FastAPI Backend)
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight text-dark">
             FitMatch Studio
           </h1>
           <p className="text-xs sm:text-sm text-dark-muted leading-relaxed">
-            Eliminate sizing guesswork and reduce carbon-intensive returns. FitMatch maps your 7-point biometric coordinates, classifies your somatic silhouette archetype, and simulates fabric stretch across major retail fashion houses.
+            Eliminate sizing guesswork and reduce carbon-intensive returns. FitMatch maps your 7-point biometric coordinates, classifies your somatic silhouette archetype, and simulates fabric stretch across major retail fashion houses using our background AI models.
           </p>
         </div>
 
@@ -100,22 +138,47 @@ export const FitMatchPage = () => {
           <button
             onClick={handleTriggerScan}
             disabled={isScanning}
-            className="luxury-btn px-5 py-3 rounded-sm text-xs uppercase tracking-wider font-semibold flex items-center gap-2 bg-[#1b261e] text-emerald-300 hover:bg-[#111813] border border-emerald-600/40 shadow-sm transition-all"
+            className={`luxury-btn px-5 py-3 rounded-sm text-xs uppercase tracking-wider font-semibold flex items-center gap-2 border shadow-sm transition-all ${
+              isScanning
+                ? "bg-[#111813] text-emerald-400/60 border-emerald-500/30 cursor-wait"
+                : "bg-[#1b261e] text-emerald-300 hover:bg-[#111813] hover:text-emerald-200 border-emerald-600/40"
+            }`}
           >
-            <Sparkles className="w-4 h-4 text-emerald-400" />
-            <span>{isScanning ? "Scanning Biometrics..." : "Run AI Biometric Scan"}</span>
+            <Sparkles className={`w-4 h-4 text-emerald-400 ${isScanning ? "animate-spin" : ""}`} />
+            <span>{isScanning ? "Processing in AI Backend..." : "Run AI Biometric Scan"}</span>
           </button>
         </div>
       </div>
 
-      {/* Live AI Processing HUD */}
-      {isScanning && (
-        <AIFitScannerHUD
-          isScanning={isScanning}
-          onComplete={handleScanComplete}
-          measurements={measurements}
-          fabricName={activeFabricObj.label}
-        />
+      {/* Live AI Processing HUD Anchor */}
+      <div ref={scannerRef}>
+        {isScanning && (
+          <AIFitScannerHUD
+            isScanning={isScanning}
+            onComplete={handleScanComplete}
+            measurements={measurements}
+            fabricName={activeFabricObj.label}
+          />
+        )}
+      </div>
+
+      {/* Backend Scan Confirmation Toast */}
+      {scanCompletedAtLeastOnce && !isScanning && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-sm text-xs text-emerald-900 flex items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <span>
+              <strong>AI Biometric Scan Synchronized:</strong> 7-point anatomical tensors and multi-brand grading curves synthesized successfully.
+            </span>
+          </div>
+          <button
+            onClick={handleTriggerScan}
+            className="text-[11px] font-semibold text-emerald-800 underline hover:text-emerald-950 flex items-center gap-1"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Re-run Scan
+          </button>
+        </div>
       )}
 
       {/* Simulator Brand & Category Controls */}
@@ -194,6 +257,7 @@ export const FitMatchPage = () => {
             onTriggerScan={handleTriggerScan}
             selectedFabricId={selectedFabricId}
             onSelectFabric={setSelectedFabricId}
+            isScanning={isScanning}
           />
         </div>
 

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { FIT_PREFERENCES } from "../../data/sizeCharts";
 import { FABRIC_TYPES } from "../../services/fitmatchService";
-import { Ruler, Info, Check, Sparkles, Cpu, Layers } from "lucide-react";
+import { Ruler, Info, Check, Sparkles, Cpu, Layers, Activity } from "lucide-react";
 
 export const MeasurementForm = ({ 
   measurements, 
@@ -9,7 +9,8 @@ export const MeasurementForm = ({
   onSave, 
   onTriggerScan, 
   selectedFabricId, 
-  onSelectFabric 
+  onSelectFabric,
+  isScanning = false 
 }) => {
   const [unit, setUnit] = useState("cm"); // cm or inches
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -238,19 +239,43 @@ export const MeasurementForm = ({
         </div>
       </div>
 
+      {/* Active Scan Indicator Banner (if currently scanning) */}
+      {isScanning && (
+        <div className="p-3 bg-[#111813] border border-emerald-500/50 rounded-sm text-xs text-emerald-300 flex items-center gap-3 animate-pulse">
+          <Activity className="w-4 h-4 text-emerald-400 animate-spin" />
+          <div className="flex-1">
+            <span className="font-bold block text-white text-[11px] uppercase tracking-wider">
+              AI Biometric Scan Running in Backend Engine
+            </span>
+            <span className="text-[10px] text-emerald-400/90">
+              FastAPI server is synthesizing anatomical coordinates and generating brand grading curves...
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons: Save & Trigger Live AI Scan */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-border">
         <button
           type="button"
-          onClick={onTriggerScan}
-          className="w-full sm:w-auto luxury-btn px-6 py-2.5 rounded-sm text-xs uppercase tracking-wider font-semibold flex items-center justify-center gap-2 bg-[#1b261e] text-emerald-300 hover:bg-[#111813] border border-emerald-600/30 transition-all shadow-sm"
+          onClick={(e) => {
+            e.preventDefault();
+            if (onTriggerScan) onTriggerScan();
+          }}
+          disabled={isScanning}
+          className={`w-full sm:w-auto luxury-btn px-6 py-2.5 rounded-sm text-xs uppercase tracking-wider font-semibold flex items-center justify-center gap-2 border transition-all shadow-sm ${
+            isScanning
+              ? "bg-[#111813] text-emerald-400/70 border-emerald-500/30 cursor-wait"
+              : "bg-[#1b261e] text-emerald-300 hover:bg-[#111813] hover:text-emerald-200 border-emerald-600/40"
+          }`}
         >
-          <Cpu className="w-4 h-4 text-emerald-400" />
-          <span>Run Live AI Biometric Scan</span>
+          <Cpu className={`w-4 h-4 text-emerald-400 ${isScanning ? "animate-spin" : ""}`} />
+          <span>{isScanning ? "Scanning Biometrics in Backend..." : "Run Live AI Biometric Scan"}</span>
         </button>
 
         <button
           type="submit"
+          disabled={isScanning}
           className="w-full sm:w-auto luxury-btn luxury-btn-primary px-6 py-2.5 rounded-sm text-xs uppercase tracking-wider font-semibold flex items-center justify-center gap-2"
         >
           {savedSuccess ? (

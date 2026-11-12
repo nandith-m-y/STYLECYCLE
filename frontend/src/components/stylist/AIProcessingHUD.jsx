@@ -142,3 +142,4 @@ export const AIProcessingHUD = ({ occasion, style, palette, onComplete }) => {
     </div>
   );
 };
+

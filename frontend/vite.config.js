@@ -6,6 +6,12 @@ export default defineConfig({
   server: {
     port: 5173,
     host: 'localhost', // SEC-REMED: Restricted to loopback interface only (prevents LAN exposure)
-    strictPort: true
+    strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true
+      }
+    }
   }
 });

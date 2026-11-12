@@ -113,3 +113,4 @@ export const BodyArchetypeCard = ({ archetypeData, measurements, preferredFit })
     </div>
   );
 };
+

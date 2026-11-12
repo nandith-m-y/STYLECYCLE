@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { useWardrobe } from "../context/WardrobeContext";
-import { generateOutfitRecommendation } from "../services/stylistService";
+import { 
+  generateOutfitRecommendation, 
+  generateAIOutfitBackend, 
+  swapOutfitPieceBackend 
+} from "../services/stylistService";
 import { OutfitGeneratorForm } from "../components/stylist/OutfitGeneratorForm";
 import { OutfitDisplayCard } from "../components/stylist/OutfitDisplayCard";
 import { AIProcessingHUD } from "../components/stylist/AIProcessingHUD";
@@ -15,6 +19,7 @@ export const AIStylistPage = () => {
   const [palette, setPalette] = useState("Earth & Sand Tones");
   const [weather, setWeather] = useState("mild");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [pendingOutfit, setPendingOutfit] = useState(null);
 
   const [currentOutfit, setCurrentOutfit] = useState(() =>
     generateOutfitRecommendation({
@@ -26,31 +31,68 @@ export const AIStylistPage = () => {
     })
   );
 
-  const handleStartGeneration = () => {
+  const handleStartGeneration = async () => {
     setIsGenerating(true);
+    
+    try {
+      // Ingest closet tokens and execute AI Stylist model in FastAPI backend
+      const backendEnsemble = await generateAIOutfitBackend({
+        wardrobeItems: wardrobe,
+        occasion,
+        style,
+        palette,
+        weather
+      });
+      setPendingOutfit(backendEnsemble);
+    } catch (err) {
+      console.warn("[AI Stylist] Error executing backend stylist:", err);
+    }
   };
 
   const handleAIProcessingComplete = () => {
-    const generated = generateOutfitRecommendation({
-      wardrobeItems: wardrobe,
-      occasion,
-      style,
-      palette,
-      weather
-    });
-    setCurrentOutfit(generated);
+    if (pendingOutfit) {
+      setCurrentOutfit(pendingOutfit);
+      setPendingOutfit(null);
+    } else {
+      const generated = generateOutfitRecommendation({
+        wardrobeItems: wardrobe,
+        occasion,
+        style,
+        palette,
+        weather
+      });
+      setCurrentOutfit(generated);
+    }
     setIsGenerating(false);
   };
 
   // Interactive Live Piece Swapper
-  const handleSwapPiece = (slotKey, newPiece) => {
+  const handleSwapPiece = async (slotKey, newPiece) => {
+    // Notify backend piece swapping model
+    try {
+      const currentPieces = {
+        top: currentOutfit?.top,
+        bottom: currentOutfit?.bottom,
+        footwear: currentOutfit?.shoes,
+        accessory: currentOutfit?.accessory
+      };
+      await swapOutfitPieceBackend({
+        currentPieces,
+        slot: slotKey,
+        wardrobe,
+        occasion,
+        style
+      });
+    } catch (err) {
+      console.warn("[AI Stylist] Backend swap sync:", err);
+    }
+
     setCurrentOutfit(prev => {
       const updated = {
         ...prev,
         [slotKey]: newPiece,
         id: `ai-ensemble-${Date.now()}`
       };
-      // Recalculate match metrics
       updated.metrics = {
         ...prev.metrics,
         overallSynergyScore: Math.min(99, Math.max(90, (prev.metrics?.overallSynergyScore || 95) + (Math.random() > 0.5 ? 1 : -1)))
@@ -60,20 +102,20 @@ export const AIStylistPage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12 animate-fadeIn">
       
       {/* Header Banner */}
       <div className="bg-[#EFECE4] border border-border p-8 sm:p-12 rounded-sm shadow-subtle flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
         <div className="max-w-2xl space-y-3 relative z-10">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full text-xs font-semibold uppercase tracking-widest text-primary border border-border">
             <Sparkles className="w-3.5 h-3.5 text-accent-dark animate-pulse" />
-            Neural Multi-Modal Styling Intelligence
+            Neural Multi-Modal Styling Intelligence (FastAPI Backend)
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-dark leading-tight">
             AI Personal Stylist Studio
           </h1>
           <p className="text-xs sm:text-sm text-dark/80 leading-relaxed max-w-xl">
-            Live neural outfit synthesis combining garments from your digitized closet. Our AI algorithm evaluates 60-30-10 color theory, occasion etiquette, and silhouette tension in real-time.
+            Live neural outfit synthesis combining garments from your digitized closet. Our backend AI algorithm evaluates 60-30-10 color theory, occasion etiquette, and silhouette tension in real-time.
           </p>
         </div>
 

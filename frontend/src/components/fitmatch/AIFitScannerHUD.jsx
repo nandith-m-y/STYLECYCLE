@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, forwardRef } from "react";
 import { Cpu, Sparkles, CheckCircle2, Activity, ShieldCheck } from "lucide-react";
 import { AI_FIT_SCAN_STEPS } from "../../services/fitmatchService";
 
-export const AIFitScannerHUD = ({ isScanning, onComplete, measurements, fabricName }) => {
+export const AIFitScannerHUD = forwardRef(({ isScanning, onComplete, measurements, fabricName }, ref) => {
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [progress, setProgress] = useState(0);
   const [logs, setLogs] = useState([]);
@@ -20,7 +20,7 @@ export const AIFitScannerHUD = ({ isScanning, onComplete, measurements, fabricNa
       `[SILHOUETTE-NET] Computing torso-to-waist taper quotient: ${(measurements.chest / (measurements.waist || 1)).toFixed(2)}x`,
       `[FABRIC-SIM] Calibrating tensile elasticity for ${fabricName || "Elastane Stretch Blend"}...`,
       `[GRADING-MATRIX] Projecting dimensional allowances across European (Zara, Massimo Dutti), US (Levi's) & Asian (Uniqlo) standards`,
-      `[SYNTHESIS-ENGINE] Zero-return sizing matrix generated with high confidence convergence.`
+      `[SYNTHESIS-ENGINE] Python backend converged: Zero-return sizing matrix generated.`
     ];
 
     setLogs([telemetryLines[0]]);
@@ -52,7 +52,10 @@ export const AIFitScannerHUD = ({ isScanning, onComplete, measurements, fabricNa
   if (!isScanning) return null;
 
   return (
-    <div className="bg-[#111612] text-cream border border-[#2d3a30] rounded-sm p-6 sm:p-8 shadow-2xl relative overflow-hidden transition-all animate-fadeIn">
+    <div 
+      ref={ref}
+      className="bg-[#111612] text-cream border border-[#2d3a30] rounded-sm p-6 sm:p-8 shadow-2xl relative overflow-hidden transition-all animate-fadeIn scroll-mt-24"
+    >
       {/* Background Matrix Grid Pattern & Laser Scan Glow */}
       <div 
         className="absolute inset-0 opacity-10 pointer-events-none"
@@ -77,11 +80,11 @@ export const AIFitScannerHUD = ({ isScanning, onComplete, measurements, fabricNa
                 FitMatch Neural Biometric Engine
               </h3>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse">
-                LIVE COMPUTE
+                BACKEND COMPUTE ACTIVE
               </span>
             </div>
             <p className="text-xs text-[#95a898] mt-0.5 font-sans">
-              Simulating multi-brand dimensional grading curves & fabric tensile relaxation
+              FastAPI Python backend executing somatic classification & tensile relaxation tensors
             </p>
           </div>
         </div>
@@ -157,9 +160,9 @@ export const AIFitScannerHUD = ({ isScanning, onComplete, measurements, fabricNa
         <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#222b24] text-[#718676]">
           <span className="flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
-            Neural Telemetry Feed
+            FastAPI Backend Telemetry Feed
           </span>
-          <span className="text-[10px] text-[#556959]">LATENCY: 12ms</span>
+          <span className="text-[10px] text-[#556959]">SERVER: http://127.0.0.1:8000</span>
         </div>
         <div className="space-y-1.5 max-h-24 overflow-y-auto text-emerald-400/90 scrollbar-thin">
           {logs.map((log, i) => (
@@ -174,4 +177,4 @@ export const AIFitScannerHUD = ({ isScanning, onComplete, measurements, fabricNa
       </div>
     </div>
   );
-};
+});

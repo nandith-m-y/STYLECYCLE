@@ -99,3 +99,4 @@ export const MultiBrandFitMatrix = ({ matrix, activeBrand, onSelectBrand, catego
     </div>
   );
 };
+
