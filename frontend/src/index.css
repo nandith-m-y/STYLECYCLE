@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  }
+  
+  body {
+    background-color: #F8F7F3;
+    color: #252525;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: "Playfair Display", Georgia, serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F1EFEA;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C4BFB3;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #234B3B;
+}
+
+/* Glassmorphism & High-fashion UI Utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(232, 230, 225, 0.7);
+}
+
+.luxury-gradient-overlay {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(35, 75, 59, 0.85) 100%);
+}
+
+.luxury-btn {
+  @apply relative inline-flex items-center justify-center font-medium transition-all duration-300 ease-out;
+}
+
+.luxury-btn-primary {
+  @apply bg-primary text-white hover:bg-primary-dark active:scale-[0.98] shadow-sm hover:shadow;
+}
+
+.luxury-btn-outline {
+  @apply border border-primary text-primary hover:bg-primary hover:text-white transition-colors duration-200;
+}
+
+.luxury-btn-accent {
+  @apply bg-accent text-dark hover:bg-accent-light active:scale-[0.98];
+}
+
+/* Aspect ratio helpers for fashion imagery */
+.aspect-fashion {
+  aspect-ratio: 3 / 4;
+}
+
+/* Animation utilities */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
